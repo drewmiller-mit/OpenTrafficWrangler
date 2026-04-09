@@ -155,7 +155,7 @@ def run_pipeline(
     if stationing_direction not in {"ascending", "descending"}:
         raise ValueError("stationing_direction must be 'ascending' or 'descending'.")
     outputs_root = (
-        Path("outputs/network/d12_network_extraction")
+        Path("outputs")
         if outputs_root is None
         else Path(outputs_root)
     )

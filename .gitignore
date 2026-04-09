@@ -3,6 +3,10 @@ outputs/*
 jobs/*
 data/*
 node_modules/*
+frontend/node_modules/*
+frontend/dist/*
+frontend/.vite/*
+.venv/*
 
 # keep the folders themselves
 !outputs/.gitkeep

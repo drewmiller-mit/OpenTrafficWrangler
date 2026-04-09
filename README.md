@@ -1,65 +1,93 @@
-# metanet_mapping
+# osm2macrosim
 
-This repository supports two connected workflows:
+This repository is a freeway network extraction and detector-stationing workspace. The current codebase is centered on:
 
-1. **Road-network extraction** for a corridor segment (lanes, ramps, validation artifacts).
-2. **PeMS to METANET calibration/simulation** (time-space gridding, smoothing, parameter fitting, simulation diagnostics).
+- extracting a freeway corridor from OpenStreetMap,
+- exporting lane, ramp, and GMNS artifacts,
+- serving that workflow through a FastAPI backend and React frontend,
+- and supporting detector stationing work in the notebook [Get_Detector_Stationing.ipynb](./Get_Detector_Stationing.ipynb).
 
-It includes a Python backend, a React frontend, CLI tools, and notebooks.
+It does not currently contain the broader PeMS calibration / METANET package structure described in older versions of this README.
 
-## Architecture Overview
+## Repo Layout
 
-- `segment_extractor/`:
-  Core extraction pipeline (Overpass query, graph pathing, clipping, stationing, lane/ramp processing).
-- `api/`:
-  FastAPI app exposing extraction jobs and artifact endpoints.
-- `frontend/`:
-  React + Vite UI. Dev server proxies `/api/*` to `http://127.0.0.1:8000`.
-- `get_road_network.py`:
-  CLI entrypoint for network extraction.
-- `pems/`:
-  Matrix-building, smoothing, sparsity, and plotting helpers.
-- `metanet_calibration/`:
-  METANET dynamics and Pyomo/IPOPT calibration logic.
-- `calibrate_pems.ipynb`:
-  Main notebook for preprocessing, calibration, and simulation.
-- `inputs/`, `outputs/`, `jobs/`:
-  Local data/artifact directories.
+- `segment_extractor/`
+  Core extraction logic: Overpass queries, graph construction, path isolation, clipping, stationing, ramp processing, visualization, and GMNS export.
+- `api/`
+  FastAPI server for running extraction jobs, listing artifacts, generating validation files, and inspecting nearby OSM features.
+- `frontend/`
+  React + Vite UI for selecting a corridor on a map and launching extraction jobs against the API.
+- `get_road_network.py`
+  Command-line entrypoint for running the extraction pipeline without the UI.
+- `Get_Detector_Stationing.ipynb`
+  Notebook for detector stationing work.
+- `jobs/`
+  Disk-backed API job records.
+- `outputs/`
+  Generated extraction artifacts.
+
+## What Gets Produced
+
+Both the CLI and API write extracted network artifacts under:
+
+`outputs/<interstate>/`
+
+Typical outputs include:
+
+- `lanes.csv`
+- `ramps.csv`
+- `gmns.zip`
+
+Intermediate debug artifacts are written under:
+
+`outputs/intermediates/`
+
+For API jobs, intermediates are grouped by job id under that directory.
 
 ## Prerequisites
 
-### Python
+- Python `3.10+`
+- Node.js `18+`
+- `npm`
 
-- Python 3.10+
-- Recommended: virtual environment (`venv` or conda)
-- IPOPT solver for calibration (code currently points to `/opt/homebrew/bin/ipopt`)
+Python packages used by this repo include:
 
-Install core Python packages:
-
-```bash
-pip install numpy pandas scipy matplotlib seaborn torch ijson \
-            geopandas shapely pyproj networkx overpy \
-            fastapi uvicorn pydantic pyomo
-```
-
-### Frontend
-
-- Node.js 18+
-- npm
+- `fastapi`
+- `uvicorn`
+- `pydantic`
+- `numpy`
+- `pandas`
+- `scipy`
+- `geopandas`
+- `shapely`
+- `pyproj`
+- `networkx`
+- `overpy`
+- `matplotlib`
+- `contextily`
+- `simplekml`
+- `jupyter` if you want to run the notebook
 
 ## Setup
 
-### 1) Python environment
+### 1. Create a Python environment
+
+From the repo root:
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
-pip install --upgrade pip
+python -m pip install --upgrade pip
 ```
 
-Then install Python dependencies (above).
+### 2. Install Python dependencies
 
-### 2) Frontend dependencies
+```bash
+pip install fastapi uvicorn pydantic numpy pandas scipy geopandas shapely pyproj \
+  networkx overpy matplotlib contextily simplekml jupyter
+```
+
+### 3. Install frontend dependencies
 
 ```bash
 cd frontend
@@ -67,39 +95,60 @@ npm install
 cd ..
 ```
 
-## Workflow A: Network Extraction
+## Startup
 
-### Option 1: Via Frontend UI
+If you want the full app experience, run the backend and frontend in separate terminals.
 
-Run in two terminals from repo root.
+### Terminal 1: start the API
 
-#### Terminal A: backend API
+From the repo root:
 
 ```bash
 source .venv/bin/activate
 uvicorn api.main:app --reload
 ```
 
-Backend URL: `http://127.0.0.1:8000`
+The API will be available at:
 
-##### Terminal B: frontend
+`http://127.0.0.1:8000`
+
+Health check:
+
+`http://127.0.0.1:8000/healthz`
+
+### Terminal 2: start the frontend
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-Frontend URL (Vite): usually `http://127.0.0.1:5173`
+The frontend will usually be available at:
 
-The frontend is configured to proxy `http://127.0.0.1:5173/api/*` to the backend.
+`http://127.0.0.1:5173`
 
-### Option 2: via CLI
+The Vite dev server proxies `/api/*` requests to `http://127.0.0.1:8000`, so both processes need to be running for the UI to work.
+
+## First Run
+
+1. Start the API.
+2. Start the frontend.
+3. Open `http://127.0.0.1:5173`.
+4. Pick start and end points on the map.
+5. Submit an extraction job.
+6. Download the generated `lanes.csv`, `ramps.csv`, or `gmns.zip` artifacts from the job panel.
+
+## Command-Line Usage
+
+You can run the network extractor directly without the frontend:
 
 ```bash
 python get_road_network.py \
   --interstate "I-5" \
-  --seg_start_lat 33.86 --seg_start_lon -118.00 \
-  --seg_end_lat 33.78 --seg_end_lon -117.90 \
+  --seg_start_lat 33.86 \
+  --seg_start_lon -118.00 \
+  --seg_end_lat 33.78 \
+  --seg_end_lon -117.90 \
   --anchor_postmile 114.8 \
   --stationing_direction descending \
   --out_lanes_csv lanes.csv \
@@ -107,77 +156,58 @@ python get_road_network.py \
   --generate_validation both
 ```
 
-Outputs land under `outputs/<interstate>/`; intermediates in `outputs/intermediates/`.
+Useful options:
 
-### Option 3: via API
+- `--start_node` and `--end_node` to override inferred OSM nodes
+- `--path_mode normal|prefer|avoid`
+- `--ref_list ...` to influence path selection
+- `--end_postmile` for two-point station calibration
+- `--generate_validation none|kml|osm|both`
 
-Start backend, then use endpoints:
+## API Endpoints
+
+Main endpoints exposed by the backend:
 
 - `GET /healthz`
 - `POST /jobs`
 - `GET /jobs/{job_id}`
 - `GET /jobs/{job_id}/files/{artifact}`
 - `POST /snap`
+- `GET /intermediates`
+- `DELETE /intermediates`
+- `GET /artifacts/file`
+- `GET /osm/features`
 - `POST /validate-network`
 - `POST /validate-network/osm`
 
-## Workflow B: PeMS Calibration + Simulation
+## Detector Stationing Notebook
 
-Open and run:
+To work with the notebook:
 
-- `calibrate_pems.ipynb`
+```bash
+source .venv/bin/activate
+jupyter notebook
+```
 
-Typical notebook flow:
+Then open:
 
-1. Load station metadata and detector demand data.
-2. Build speed/flow matrices in space-time.
-3. Apply optional smoothing/imputation.
-4. Construct `rho_hat`, `q_hat`, `v_hat`.
-5. Run calibration (`metanet_calibration.ipopt_optimization.run_calibration`).
-6. Run forward simulation (`metanet_calibration.metanet_dynamics.run_metanet_sim`).
-7. Save arrays/figures under `outputs/`.
-
-## Data and Git Hygiene
-
-`.gitignore` excludes local runtime data/artifacts, including:
-
-- `inputs/*`
-- `outputs/*`
-- `jobs/*`
-
-Avoid committing large raw detector files (GitHub hard limit: 100 MB/file).
+`Get_Detector_Stationing.ipynb`
 
 ## Troubleshooting
 
-### IPOPT not found
+### Frontend cannot reach the backend
 
-Calibration will fail if IPOPT is missing or at a different path. Update solver path in:
+- Confirm the API is running on `127.0.0.1:8000`.
+- Confirm the frontend is running from `frontend/` with `npm run dev`.
+- Confirm [frontend/vite.config.js](./frontend/vite.config.js) still proxies `/api` to `127.0.0.1:8000`.
 
-- `metanet_calibration/ipopt_optimization.py`
+### Overpass requests fail or time out
 
-### Overpass timeout / rate limit
+- Retry the request.
+- Use a shorter corridor.
+- Zoom further in before using OSM inspection in the UI.
 
-Extraction depends on Overpass API. If requests fail, retry with a smaller corridor/bbox.
+### Files are not where you expect
 
-### GMNS outputs
-
-Each successful extraction now also writes a GMNS bundle under `outputs/<interstate>/gmns/`:
-
-- `node.csv`
-- `link.csv`
-- `config.csv`
-- `../gmns.zip`
-
-The current pass encodes on/off ramp attachment points in `node.csv` via `node_type`, splits mainline links at those nodes, and omits optional GMNS columns when they have no data. Existing `lanes.csv` and `ramps.csv` outputs are still produced unchanged.
-
-### Frontend cannot reach backend
-
-- Ensure backend is running on `127.0.0.1:8000`.
-- Ensure frontend is started from `frontend/` with `npm run dev`.
-- Check `frontend/vite.config.js` proxy target.
-
-## Suggested First Run
-
-1. Start backend + frontend and submit one extraction job in the UI.
-2. Run one CLI extraction to verify local pipeline output files.
-3. Run `calibrate_pems.ipynb` on a short time window before full runs.
+- CLI and API outputs go directly under `outputs/`.
+- Job metadata is written to `jobs/`.

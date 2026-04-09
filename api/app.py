@@ -40,7 +40,7 @@ from .schemas import (
 )
 from .storage import JobStore
 
-OUTPUT_ROOT = Path("outputs/network/d12_network_extraction")
+OUTPUT_ROOT = Path("outputs")
 INTERMEDIATE_ROOT = OUTPUT_ROOT / "intermediates"
 JOB_STORE_ROOT = Path("jobs")
 
