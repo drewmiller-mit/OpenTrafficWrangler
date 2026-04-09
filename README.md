@@ -5,7 +5,7 @@ This repository is a freeway network extraction and detector-stationing workspac
 - extracting a freeway corridor from OpenStreetMap,
 - exporting lane, ramp, and GMNS artifacts,
 - serving that workflow through a FastAPI backend and React frontend,
-- and supporting detector stationing work in the notebook [Get_Detector_Stationing.ipynb](./Get_Detector_Stationing.ipynb).
+- and supporting PeMS preprocessing and corridor filtering work under `pems/`.
 
 It does not currently contain the broader PeMS calibration / METANET package structure described in older versions of this README.
 
@@ -19,6 +19,8 @@ It does not currently contain the broader PeMS calibration / METANET package str
   React + Vite UI for selecting a corridor on a map and launching extraction jobs against the API.
 - `get_road_network.py`
   Command-line entrypoint for running the extraction pipeline without the UI.
+- `pems/`
+  PeMS preprocessing notebooks plus `pems_utils.py` for smoothing, sparsity summaries, and related detector-data utilities.
 - `Get_Detector_Stationing.ipynb`
   Notebook for detector stationing work.
 - `jobs/`
@@ -66,6 +68,7 @@ Python packages used by this repo include:
 - `matplotlib`
 - `contextily`
 - `simplekml`
+- `torch`
 - `jupyter` if you want to run the notebook
 
 ## Setup
@@ -84,7 +87,7 @@ python -m pip install --upgrade pip
 
 ```bash
 pip install fastapi uvicorn pydantic numpy pandas scipy geopandas shapely pyproj \
-  networkx overpy matplotlib contextily simplekml jupyter
+  networkx overpy matplotlib contextily simplekml torch jupyter
 ```
 
 ### 3. Install frontend dependencies
@@ -180,18 +183,25 @@ Main endpoints exposed by the backend:
 - `POST /validate-network`
 - `POST /validate-network/osm`
 
-## Detector Stationing Notebook
+## PeMS and Detector Notebooks
 
-To work with the notebook:
+To work with the notebooks:
 
 ```bash
 source .venv/bin/activate
 jupyter notebook
 ```
 
-Then open:
+Relevant notebooks and utilities in this repo:
 
-`Get_Detector_Stationing.ipynb`
+- `Get_Detector_Stationing.ipynb`
+- `pems/Calibration_Prep.ipynb`
+- `pems/Filter_Corridors.ipynb`
+- `pems/Filter_I5_S.ipynb`
+- `pems/D12.ipynb`
+- `pems/pems_utils.py`
+
+The `pems/pems_utils.py` module contains helper functions for PeMS data preparation, including adaptive smoothing and detector sparsity summaries.
 
 ## Troubleshooting
 
