@@ -10,7 +10,7 @@ This repository is a freeway network extraction and detector-stationing workspac
 It does not currently contain the broader PeMS calibration / METANET package structure described in older versions of this README.
 
 ## Demo Video - Freeway Network Extraction and Validation
-[![Demo video](frontend/thumbnail.png)]()
+[![Demo video](frontend/thumbnail.png)](https://github.com/drewmiller-mit/OpenTrafficWrangler/issues/2#issue-4378399374)
 
 
 ## Repo Layout
