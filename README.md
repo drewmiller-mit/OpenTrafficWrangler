@@ -1,4 +1,4 @@
-# osm2macrosim
+# OpenTrafficWrangler
 
 This repository is a freeway network extraction and detector-stationing workspace. The current codebase is centered on:
 
